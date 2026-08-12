@@ -278,13 +278,16 @@ function printMonthlyTable() {
   printCss.id = 'print-only-table';
   printCss.textContent = `
     @media print {
-      body > *:not(#results) { display: none !important; }
+      body > *:not(main) { display: none !important; }
+      main > *:not(#results) { display: none !important; }
       #results > *:not(.table-card) { display: none !important; }
       .table-card, .table-card * {
         background: #fff !important;
         color: #000 !important;
         box-shadow: none !important;
       }
+      .table-card { max-height: none !important; overflow: visible !important; }
+      .monthly-table thead th { position: static !important; }
       .monthly-table td.pos { color: #067d33 !important; }
       .monthly-table td.neg { color: #c0212a !important; }
     }`;
