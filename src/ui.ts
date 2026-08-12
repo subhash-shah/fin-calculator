@@ -217,7 +217,12 @@ function update() {
   } else {
     resultsEl.appendChild(buildResultsGrid(current.describeSeries(view.points[view.points.length - 1])));
     resultsEl.appendChild(buildViewToggle());
-    resultsEl.appendChild(resultsView === 'chart' ? buildChart(view.points) : buildMonthlyTable(view.points));
+    if (resultsView === 'chart') {
+      resultsEl.appendChild(buildChart(view.points));
+    } else {
+      resultsEl.appendChild(buildExportBar(view.points));
+      resultsEl.appendChild(buildMonthlyTable(view.points));
+    }
   }
 }
 
@@ -235,6 +240,73 @@ function buildViewToggle(): HTMLElement {
     });
     wrap.appendChild(btn);
   }
+  return wrap;
+}
+
+function monthlyRows(points: SeriesPoint[]): { headers: string[]; rows: (string | number)[][] } {
+  const hasWithdrawn = points.some((p) => p.withdrawn > 0);
+  const headers = ['Month', 'Value', 'Invested', 'Gain', 'Multiple', ...(hasWithdrawn ? ['Withdrawn'] : [])];
+  const rows = points.map((p) => {
+    const year = Math.floor((p.month - 1) / 12) + 1;
+    const monthInYear = ((p.month - 1) % 12) + 1;
+    return [
+      `Y${year} M${monthInYear}`,
+      p.value.toFixed(2),
+      p.invested.toFixed(2),
+      p.gain.toFixed(2),
+      p.multiple.toFixed(2),
+      ...(hasWithdrawn ? [p.withdrawn.toFixed(2)] : []),
+    ];
+  });
+  return { headers, rows };
+}
+
+function downloadCsv(points: SeriesPoint[]) {
+  const { headers, rows } = monthlyRows(points);
+  const csv = [headers, ...rows].map((r) => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${current.id}-monthly.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/** Opens the browser print dialog scoped to just the monthly table, so "Save as PDF" gives a clean export. */
+function printMonthlyTable() {
+  const printCss = document.createElement('style');
+  printCss.id = 'print-only-table';
+  printCss.textContent = `
+    @media print {
+      body > *:not(#results) { display: none !important; }
+      #results > *:not(.table-card) { display: none !important; }
+      .table-card, .table-card * {
+        background: #fff !important;
+        color: #000 !important;
+        box-shadow: none !important;
+      }
+      .monthly-table td.pos { color: #067d33 !important; }
+      .monthly-table td.neg { color: #c0212a !important; }
+    }`;
+  document.head.appendChild(printCss);
+  window.addEventListener('afterprint', () => printCss.remove(), { once: true });
+  window.print();
+}
+
+function buildExportBar(points: SeriesPoint[]): HTMLElement {
+  const wrap = document.createElement('div');
+  wrap.className = 'view-toggle';
+  const csvBtn = document.createElement('button');
+  csvBtn.type = 'button';
+  csvBtn.className = 'btn btn-secondary';
+  csvBtn.textContent = 'Export CSV';
+  csvBtn.addEventListener('click', () => downloadCsv(points));
+  const pdfBtn = document.createElement('button');
+  pdfBtn.type = 'button';
+  pdfBtn.className = 'btn btn-secondary';
+  pdfBtn.textContent = 'Export PDF';
+  pdfBtn.addEventListener('click', printMonthlyTable);
+  wrap.append(csvBtn, pdfBtn);
   return wrap;
 }
 
