@@ -1,38 +1,36 @@
-/* Theme variables: light (default) and dark, switched via data-theme on <html>. */
+/* InfoInsight brand mapping: local aliases onto tokens from brand-tokens.css,
+   switched via data-theme on <html> the same way the app already worked. */
 :root,
 :root[data-theme='light'] {
-  --bg: #eef1f6;
   --card: #ffffff;
-  --border: #d7dce4;
-  --text: #1c2430;
-  --muted: #505966;
-  --accent: #1d5fd6;
-  --accent-soft: #e5edfd;
-  --pos: #16713b;
-  --neg: #b3261e;
+  --border: var(--line);
+  --text: var(--ink);
+  --muted: var(--ink-muted);
+  --accent: var(--brand);
+  --accent-soft: rgba(59, 130, 246, 0.1);
+  --pos: var(--success);
+  --neg: var(--error);
   --error-bg: #fdecea;
   --error-border: #f2b8b3;
-  --shadow: 0 1px 3px rgba(16, 24, 40, 0.08);
 }
 :root[data-theme='dark'] {
-  --bg: #14181f;
-  --card: #1e242e;
-  --border: #333c49;
-  --text: #e8ebf0;
-  --muted: #a3aab6;
-  --accent: #6ea4ff;
-  --accent-soft: #23354f;
+  --bg: var(--bg-dark);
+  --card: var(--bg-dark-subtle);
+  --border: var(--line-light);
+  --text: var(--ink-light);
+  --muted: var(--ink-light-muted);
+  --accent: var(--teal);
+  --accent-soft: rgba(6, 182, 212, 0.15);
   --pos: #4ecb74;
   --neg: #ff7b72;
   --error-bg: #3a2020;
   --error-border: #7a3a35;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 * { box-sizing: border-box; }
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: var(--font-body);
   color: var(--text);
   background: var(--bg);
   transition: background 0.2s, color 0.2s;
@@ -47,25 +45,29 @@ header {
   border-bottom: 1px solid var(--border);
   background: var(--card);
 }
-h1 { margin: 0; font-size: 20px; }
-h2 { margin: 18px 0 8px; font-size: 15px; color: var(--muted); font-weight: 600; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-logo { height: 40px; width: auto; border-radius: var(--radius-sm); object-fit: contain; }
+h1 { margin: 0; font-size: 20px; font-family: var(--font-heading); font-weight: 800; letter-spacing: -0.01em; }
+h2 { margin: 18px 0 8px; font-size: 15px; color: var(--muted); font-weight: 600; font-family: var(--font-heading); }
 
 main { max-width: 760px; margin: 0 auto; padding: 24px; }
 
 /* Buttons */
 button {
   font: inherit;
+  font-family: var(--font-body);
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: var(--radius-pill);
   border: 1px solid var(--border);
   background: var(--card);
   color: var(--text);
-  padding: 8px 16px;
-  transition: background 0.15s, border-color 0.15s, transform 0.05s;
+  font-weight: 600;
+  padding: 8px 18px;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s, box-shadow 0.15s;
 }
-button:hover { border-color: var(--accent); }
-button:active { transform: translateY(1px); }
-#theme-toggle { padding: 6px 14px; font-size: 13px; }
+button:hover { border-color: var(--accent); transform: translateY(-1px); }
+button:active { transform: translateY(0); }
+#theme-toggle { padding: 6px 16px; font-size: 13px; }
 
 /* Tabs */
 #tabs { display: flex; gap: 8px; padding: 16px 24px 0; max-width: 760px; margin: 0 auto; }
@@ -73,22 +75,24 @@ button:active { transform: translateY(1px); }
   background: transparent;
   border: 1px solid var(--border);
   border-bottom: none;
-  border-radius: 10px 10px 0 0;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   padding: 9px 18px;
   font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
 }
 .tab.active {
   background: var(--card);
   color: var(--accent);
   border-color: var(--border);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* Form */
 #form {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   padding: 20px;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -133,11 +137,13 @@ input[type='range']::-moz-range-thumb {
 }
 /* Number box */
 input[type='number'] {
-  width: 92px;
+  width: 130px;
   padding: 7px 8px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font-size: 14px;
+  font-family: var(--font-body);
+  font-variant-numeric: tabular-nums;
   background: var(--bg);
   color: var(--text);
   text-align: right;
@@ -153,7 +159,7 @@ input[type='number'] {
   margin: 12px 0 0;
   background: var(--error-bg);
   border: 1px solid var(--error-border);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   color: var(--neg);
   font-size: 13px;
 }
@@ -163,7 +169,7 @@ input[type='number'] {
 .results-grid {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   padding: 8px 20px;
   box-shadow: var(--shadow);
 }
@@ -175,6 +181,6 @@ input[type='number'] {
 }
 .result:last-child { border-bottom: none; }
 .rl { color: var(--muted); }
-.rv { font-weight: 700; }
+.rv { font-weight: 700; font-variant-numeric: tabular-nums; font-family: var(--font-heading); }
 .rv.pos { color: var(--pos); }
 .rv.neg { color: var(--neg); }
