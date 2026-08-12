@@ -48,6 +48,8 @@ export interface SeriesPoint {
   multiple: number;
   /** Cumulative amount withdrawn via SWP (0 if unused). */
   withdrawn: number;
+  /** Interest/growth earned this month (on balance before this month's SIP/SWP). */
+  interest: number;
 }
 
 /**

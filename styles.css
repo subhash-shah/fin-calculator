@@ -10,6 +10,7 @@
   --accent-soft: rgba(59, 130, 246, 0.1);
   --pos: var(--success);
   --neg: var(--error);
+  --warn: #b45309;
   --error-bg: #fdecea;
   --error-border: #f2b8b3;
 }
@@ -23,6 +24,7 @@
   --accent-soft: rgba(6, 182, 212, 0.15);
   --pos: #4ecb74;
   --neg: #ff7b72;
+  --warn: #f0b429;
   --error-bg: #3a2020;
   --error-border: #7a3a35;
 }
@@ -196,7 +198,7 @@ input[type='number'] {
   border-radius: var(--radius-md);
   box-shadow: var(--shadow);
   max-height: 480px;
-  overflow-y: auto;
+  overflow: auto;
   padding: 0;
 }
 .monthly-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
@@ -213,6 +215,7 @@ input[type='number'] {
 .monthly-table tbody tr:nth-child(even) { background: var(--accent-soft); }
 .monthly-table td.pos { color: var(--pos); }
 .monthly-table td.neg { color: var(--neg); }
+.monthly-table td.warn { color: var(--warn); }
 
 /* Chart */
 .chart-card {
@@ -255,3 +258,4 @@ input[type='number'] {
 .rv { font-weight: 700; font-variant-numeric: tabular-nums; font-family: var(--font-heading); }
 .rv.pos { color: var(--pos); }
 .rv.neg { color: var(--neg); }
+.rv.warn { color: var(--warn); }

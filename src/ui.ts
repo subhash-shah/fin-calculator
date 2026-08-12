@@ -245,17 +245,18 @@ function buildViewToggle(): HTMLElement {
 
 function monthlyRows(points: SeriesPoint[]): { headers: string[]; rows: (string | number)[][] } {
   const hasWithdrawn = points.some((p) => p.withdrawn > 0);
-  const headers = ['Month', 'Value', 'Invested', 'Gain', 'Multiple', ...(hasWithdrawn ? ['Withdrawn'] : [])];
+  const headers = ['Month', 'Invested', 'Interest', ...(hasWithdrawn ? ['Withdrawn'] : []), 'Gain', 'Value', 'Multiple'];
   const rows = points.map((p) => {
     const year = Math.floor((p.month - 1) / 12) + 1;
     const monthInYear = ((p.month - 1) % 12) + 1;
     return [
       `Y${year} M${monthInYear}`,
-      p.value.toFixed(2),
       p.invested.toFixed(2),
-      p.gain.toFixed(2),
-      p.multiple.toFixed(2),
+      p.interest.toFixed(2),
       ...(hasWithdrawn ? [p.withdrawn.toFixed(2)] : []),
+      p.gain.toFixed(2),
+      p.value.toFixed(2),
+      p.multiple.toFixed(2),
     ];
   });
   return { headers, rows };
@@ -277,6 +278,7 @@ function printMonthlyTable() {
   const printCss = document.createElement('style');
   printCss.id = 'print-only-table';
   printCss.textContent = `
+    @page { size: landscape; margin: 12mm; }
     @media print {
       body > *:not(main) { display: none !important; }
       main > *:not(#results) { display: none !important; }
@@ -287,9 +289,16 @@ function printMonthlyTable() {
         box-shadow: none !important;
       }
       .table-card { max-height: none !important; overflow: visible !important; }
+      .monthly-table { width: 100% !important; table-layout: fixed !important; }
+      .monthly-table th, .monthly-table td {
+        padding: 4px 6px !important;
+        font-size: 10px !important;
+        white-space: normal !important;
+      }
       .monthly-table thead th { position: static !important; }
       .monthly-table td.pos { color: #067d33 !important; }
       .monthly-table td.neg { color: #c0212a !important; }
+      .monthly-table td.warn { color: #b45309 !important; }
     }`;
   document.head.appendChild(printCss);
   window.addEventListener('afterprint', () => printCss.remove(), { once: true });
@@ -321,7 +330,7 @@ function buildMonthlyTable(points: SeriesPoint[]): HTMLElement {
   const table = document.createElement('table');
   table.className = 'monthly-table';
   const thead = document.createElement('thead');
-  thead.innerHTML = `<tr><th>Month</th><th>Value</th><th>Invested</th><th>Gain</th><th>Multiple</th>${hasWithdrawn ? '<th>Withdrawn</th>' : ''}</tr>`;
+  thead.innerHTML = `<tr><th>Month</th><th>Invested</th><th>Interest</th>${hasWithdrawn ? '<th>Withdrawn</th>' : ''}<th>Gain</th><th>Value</th><th>Multiple</th></tr>`;
   const tbody = document.createElement('tbody');
   for (const p of points) {
     const year = Math.floor((p.month - 1) / 12) + 1;
@@ -329,11 +338,12 @@ function buildMonthlyTable(points: SeriesPoint[]): HTMLElement {
     const tr = document.createElement('tr');
     tr.innerHTML =
       `<td>Y${year} M${monthInYear}</td>` +
-      `<td>${cur.format(p.value)}</td>` +
       `<td>${cur.format(p.invested)}</td>` +
+      `<td class="${p.interest < 0 ? 'neg' : p.interest > 0 ? 'pos' : ''}">${cur.format(p.interest)}</td>` +
+      (hasWithdrawn ? `<td class="${p.withdrawn > 0 ? 'warn' : ''}">${cur.format(p.withdrawn)}</td>` : '') +
       `<td class="${p.gain < 0 ? 'neg' : p.gain > 0 ? 'pos' : ''}">${cur.format(p.gain)}</td>` +
-      `<td>${p.multiple.toFixed(2)}×</td>` +
-      (hasWithdrawn ? `<td>${cur.format(p.withdrawn)}</td>` : '');
+      `<td>${cur.format(p.value)}</td>` +
+      `<td>${p.multiple.toFixed(2)}×</td>`;
     tbody.appendChild(tr);
   }
   table.append(thead, tbody);
@@ -349,7 +359,8 @@ function resultListItems(results: Result[]): HTMLElement[] {
     label.className = 'rl';
     label.textContent = r.label;
     const value = document.createElement('span');
-    value.className = 'rv' + (r.value < 0 ? ' neg' : r.value > 0 ? ' pos' : '');
+    value.className =
+      'rv' + (r.label === 'Total SWP' ? ' warn' : r.value < 0 ? ' neg' : r.value > 0 ? ' pos' : '');
     value.textContent = format(r);
     div.append(label, value);
     return div;
@@ -378,6 +389,7 @@ function buildChart(points: SeriesPoint[]): HTMLElement {
   const n = points.length;
   const xAt = (i: number) => padL + (i / (n - 1)) * (W - padL - padR);
 
+  const hasWithdrawn = points.some((p) => p.withdrawn > 0);
   const values = points.map((p) => p.value);
   const invested = points.map((p) => p.invested);
   const minV = Math.min(0, ...values, ...invested);
@@ -428,10 +440,11 @@ function buildChart(points: SeriesPoint[]): HTMLElement {
         <line x1="0" y1="${padT}" x2="0" y2="${H - padB}" stroke="var(--text)" stroke-dasharray="2,2" />
         <circle r="4" fill="var(--accent)" />
         <circle r="4" fill="var(--muted)" />
-        <rect class="chart-tip-bg" width="150" height="46" rx="6" fill="var(--card)" stroke="var(--border)" />
+        <rect class="chart-tip-bg" width="150" height="${hasWithdrawn ? 59 : 46}" rx="6" fill="var(--card)" stroke="var(--border)" />
         <text class="chart-tip-month" x="8" y="15" font-size="11" fill="var(--muted)"></text>
         <text class="chart-tip-value" x="8" y="30" font-size="11" fill="var(--text)"></text>
         <text class="chart-tip-invested" x="8" y="43" font-size="11" fill="var(--muted)"></text>
+        ${hasWithdrawn ? '<text class="chart-tip-withdrawn" x="8" y="56" font-size="11" fill="var(--warn)"></text>' : ''}
       </g>
       <rect class="chart-overlay" x="${padL}" y="${padT}" width="${W - padL - padR}" height="${H - padT - padB}" fill="transparent" />
     </svg>`;
@@ -445,6 +458,7 @@ function buildChart(points: SeriesPoint[]): HTMLElement {
   const tipMonth = hover.querySelector('.chart-tip-month')!;
   const tipValue = hover.querySelector('.chart-tip-value')!;
   const tipInvested = hover.querySelector('.chart-tip-invested')!;
+  const tipWithdrawn = hover.querySelector('.chart-tip-withdrawn');
 
   const showAt = (i: number) => {
     const p = points[i];
@@ -460,10 +474,11 @@ function buildChart(points: SeriesPoint[]): HTMLElement {
     tipMonth.textContent = `Year ${year}, Month ${monthInYear}`;
     tipValue.textContent = `Value: ${cur.format(p.value)}`;
     tipInvested.textContent = `Invested: ${cur.format(p.invested)}`;
+    if (tipWithdrawn) tipWithdrawn.textContent = `Withdrawn: ${cur.format(p.withdrawn)}`;
     const boxW = Number(tipBg.getAttribute('width'));
     const tipX = Math.min(Math.max(x + 10, padL), W - padR - boxW);
     const tipY = padT + 4;
-    for (const el of [tipBg, tipMonth, tipValue, tipInvested]) {
+    for (const el of [tipBg, tipMonth, tipValue, tipInvested, tipWithdrawn].filter((e) => e !== null)) {
       el.setAttribute('transform', `translate(${tipX.toFixed(1)}, ${tipY})`);
     }
     hover.style.display = '';

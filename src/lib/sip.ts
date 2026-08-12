@@ -46,7 +46,8 @@ export function sipTable(i: SipInputs): SeriesPoint[] {
     // SIP steps up once per year, on the first month of each new year.
     const sipM = i.sip * Math.pow(1 + i.stepUp / 100, Math.floor((m - 1) / 12));
     const swpM = i.swp * Math.pow(1 + (i.swpStepUp ?? 0) / 100, Math.floor((m - 1) / 12));
-    balance += balance * monthlyRate - swpM + sipM;
+    const interest = balance * monthlyRate;
+    balance += interest - swpM + sipM;
     invested += sipM;
     withdrawn += swpM;
     points.push({
@@ -56,6 +57,7 @@ export function sipTable(i: SipInputs): SeriesPoint[] {
       gain: balance - invested,
       multiple: balance / invested,
       withdrawn,
+      interest,
     });
   }
   return points;
