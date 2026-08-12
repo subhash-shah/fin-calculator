@@ -1,5 +1,5 @@
 import { calculators } from './lib/registry.ts';
-import type { Calculator, Result, SeriesPoint } from './lib/types.ts';
+import type { Calculator, FieldDef, Result, SeriesPoint } from './lib/types.ts';
 import { validateField, parseField } from './lib/validate.ts';
 
 // ---- Theme: light/dark, auto-detected, remembered. ----
@@ -48,6 +48,8 @@ const resultsEl = $('#results');
 
 let current: Calculator = calculators[0];
 let inputs = new Map<string, HTMLInputElement>();
+let groupEnabled = new Map<string, boolean>();
+let hintEls = new Map<string, HTMLElement>();
 
 function renderTabs() {
   tabsEl.innerHTML = '';
@@ -66,72 +68,129 @@ function renderTabs() {
   }
 }
 
+function renderField(f: FieldDef): HTMLElement {
+  const wrap = document.createElement('div');
+  wrap.className = 'field';
+  const label = document.createElement('label');
+  label.textContent = f.label;
+  label.htmlFor = `f-${f.key}`;
+  const line = document.createElement('div');
+  line.className = 'input-line';
+  const range = document.createElement('input');
+  range.type = 'range';
+  range.min = String(f.min);
+  range.max = String(f.max);
+  range.step = String(f.step);
+  range.value = String(f.default);
+  const number = document.createElement('input');
+  number.type = 'number';
+  number.id = `f-${f.key}`;
+  number.min = String(f.min);
+  number.max = String(f.max);
+  number.step = 'any';
+  number.value = String(f.default);
+  // Either control updates the other; both recompute.
+  const sync = (src: HTMLInputElement) => {
+    if (range.value !== src.value) range.value = src.value;
+    if (number.value !== src.value) number.value = src.value;
+    update();
+  };
+  range.addEventListener('input', () => sync(range));
+  number.addEventListener('input', () => sync(number));
+  inputs.set(f.key, number); // parse/validate reads the number box
+  line.append(range, number);
+  wrap.append(label, line);
+  if (f.hint) {
+    const hint = document.createElement('small');
+    hint.className = 'field-hint';
+    hintEls.set(f.key, hint);
+    wrap.append(hint);
+  }
+  return wrap;
+}
+
 function renderForm() {
   formEl.innerHTML = '';
+  formEl.className = 'card';
   inputs = new Map();
+  groupEnabled = new Map();
+  hintEls = new Map();
   for (const f of current.fields) {
-    const wrap = document.createElement('div');
-    wrap.className = 'field';
-    const label = document.createElement('label');
-    label.textContent = f.label;
-    label.htmlFor = `f-${f.key}`;
-    const line = document.createElement('div');
-    line.className = 'input-line';
-    const range = document.createElement('input');
-    range.type = 'range';
-    range.min = String(f.min);
-    range.max = String(f.max);
-    range.step = String(f.step);
-    range.value = String(f.default);
-    const number = document.createElement('input');
-    number.type = 'number';
-    number.min = String(f.min);
-    number.max = String(f.max);
-    number.step = 'any';
-    number.value = String(f.default);
-    // Either control updates the other; both recompute.
-    const sync = (src: HTMLInputElement) => {
-      if (range.value !== src.value) range.value = src.value;
-      if (number.value !== src.value) number.value = src.value;
+    if (f.group) continue;
+    formEl.appendChild(renderField(f));
+  }
+  for (const g of current.groups ?? []) {
+    groupEnabled.set(g.id, false);
+    const groupFields = current.fields.filter((f) => f.group === g.id);
+    const section = document.createElement('div');
+    section.className = 'field-group';
+    const header = document.createElement('label');
+    header.className = 'field-group-toggle';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    header.append(checkbox, document.createTextNode(g.label));
+    const body = document.createElement('div');
+    body.className = 'field-group-body';
+    body.hidden = true;
+    for (const f of groupFields) body.appendChild(renderField(f));
+    checkbox.addEventListener('change', () => {
+      groupEnabled.set(g.id, checkbox.checked);
+      body.hidden = !checkbox.checked;
       update();
-    };
-    range.addEventListener('input', () => sync(range));
-    number.addEventListener('input', () => sync(number));
-    inputs.set(f.key, number); // parse/validate reads the number box
-    line.append(range, number);
-    wrap.append(label, line);
-    formEl.appendChild(wrap);
+    });
+    section.append(header, body);
+    formEl.appendChild(section);
   }
   const actions = document.createElement('div');
   actions.className = 'actions';
   const reset = document.createElement('button');
   reset.type = 'button';
+  reset.className = 'btn btn-secondary';
   reset.textContent = 'Reset';
   reset.addEventListener('click', () => {
     for (const f of current.fields) inputs.get(f.key)!.value = String(f.default);
+    for (const g of current.groups ?? []) groupEnabled.set(g.id, false);
+    formEl.querySelectorAll<HTMLInputElement>('.field-group-toggle input').forEach((c) => (c.checked = false));
+    formEl.querySelectorAll<HTMLElement>('.field-group-body').forEach((b) => (b.hidden = true));
     update();
   });
   actions.appendChild(reset);
   formEl.appendChild(actions);
 }
 
+function fieldDisabled(f: FieldDef): boolean {
+  return f.group !== undefined && !groupEnabled.get(f.group);
+}
+
 function readValues(): Record<string, number> {
   const values: Record<string, number> = {};
-  for (const f of current.fields) values[f.key] = parseField(f, inputs.get(f.key)!.value);
+  for (const f of current.fields) {
+    values[f.key] = fieldDisabled(f) ? 0 : parseField(f, inputs.get(f.key)!.value);
+  }
   return values;
 }
 
 function validate(): string[] {
   const errors: string[] = [];
   for (const f of current.fields) {
+    if (fieldDisabled(f)) continue;
     const err = validateField(f, inputs.get(f.key)!.value);
     if (err) errors.push(err);
   }
   return errors;
 }
 
+function updateHints() {
+  if (hintEls.size === 0) return;
+  const values = readValues();
+  for (const f of current.fields) {
+    if (f.hint) hintEls.get(f.key)!.textContent = f.hint(values);
+  }
+}
+
 /** Recompute and re-render based on current inputs. */
 function update() {
+  updateHints();
   const errors = validate();
   errorsEl.hidden = errors.length === 0;
   errorsEl.innerHTML = '';
@@ -172,7 +231,7 @@ function renderResults(results: Result[]) {
   resultsEl.innerHTML = '';
   const items = resultListItems(results);
   const grid = document.createElement('div');
-  grid.className = 'results-grid';
+  grid.className = 'results-grid card';
   grid.append(...items);
   resultsEl.appendChild(grid);
 }

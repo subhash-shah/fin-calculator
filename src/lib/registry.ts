@@ -1,25 +1,54 @@
 import type { Calculator, Result, SeriesPoint } from './types.ts';
-import { sipTable } from './sip.ts';
+import { sipTable, lastMonthlySip, lastMonthlySwp } from './sip.ts';
 import { incomeReturns } from './incomeReturns.ts';
+
+const cur = new Intl.NumberFormat('en-IN', {
+  style: 'currency',
+  currency: 'INR',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
 
 export const sipCalculator: Calculator = {
   id: 'sip',
   title: 'SIP',
   fields: [
-    { key: 'initial', label: 'Initial investment', default: 0, min: 0, max: 10000000, step: 1000, required: false },
+    { key: 'initial', label: 'Initial investment', default: 0, min: 0, max: 9999999999, step: 1000, required: false },
     { key: 'rate', label: 'Annual rate %', default: 0, min: 0, max: 50, step: 0.25, required: true },
     { key: 'sip', label: 'Monthly SIP', default: 5000, min: 0, max: 500000, step: 500, required: false },
-    { key: 'swp', label: 'Monthly SWP', default: 0, min: 0, max: 500000, step: 500, required: false },
-    { key: 'stepUp', label: 'Step-up % / year', default: 0, min: 0, max: 50, step: 0.5, required: false },
+    {
+      key: 'stepUp',
+      label: 'Step-up % / year',
+      default: 0,
+      min: 0,
+      max: 50,
+      step: 0.5,
+      required: false,
+      hint: (v) => `Last SIP: ${cur.format(lastMonthlySip(v as never))}`,
+    },
     { key: 'years', label: 'Years', default: 10, min: 0, max: 50, step: 1, required: true },
     { key: 'months', label: 'Months', default: 0, min: 0, max: 11, step: 1, required: false },
+    { key: 'swp', label: 'Monthly SWP', default: 0, min: 0, max: 500000, step: 500, required: false, group: 'swp' },
+    {
+      key: 'swpStepUp',
+      label: 'SWP step-up % / year',
+      default: 0,
+      min: 0,
+      max: 50,
+      step: 0.5,
+      required: false,
+      group: 'swp',
+      hint: (v) => `Last SWP: ${cur.format(lastMonthlySwp(v as never))}`,
+    },
   ],
+  groups: [{ id: 'swp', label: 'Systematic Withdrawal Plan (SWP)' }],
   compute: (v) => ({ kind: 'series', points: sipTable(v as never) }),
   describeSeries: (p: SeriesPoint): Result[] => [
     { label: 'Value', value: p.value, format: 'currency' },
     { label: 'Invested', value: p.invested, format: 'currency' },
     { label: 'Gain', value: p.gain, format: 'currency' },
     { label: 'Multiple', value: p.multiple, format: 'ratio' },
+    ...(p.withdrawn > 0 ? [{ label: 'Total SWP', value: p.withdrawn, format: 'currency' as const }] : []),
   ],
 };
 

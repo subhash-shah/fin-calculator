@@ -101,6 +101,7 @@ button:active { transform: translateY(0); }
 }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field label { font-size: 13px; color: var(--muted); }
+.field-hint { font-size: 11px; color: var(--muted); text-align: right; }
 .input-line {
   display: flex;
   align-items: center;
@@ -148,6 +149,25 @@ input[type='number'] {
   color: var(--text);
   text-align: right;
 }
+
+/* Field groups (e.g. SWP) — gated behind a checkbox */
+.field-group { grid-column: 1 / -1; border-top: 1px solid var(--border); padding-top: 16px; }
+.field-group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+}
+.field-group-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px 20px;
+  margin-top: 14px;
+}
+.field-group-body[hidden] { display: none; }
 
 /* Form actions */
 .actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; }
