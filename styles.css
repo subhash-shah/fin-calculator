@@ -13,6 +13,7 @@
   --warn: #b45309;
   --error-bg: #fdecea;
   --error-border: #f2b8b3;
+  --refill-soft: #dcfce7;
 }
 :root[data-theme='dark'] {
   --bg: var(--bg-dark);
@@ -27,6 +28,7 @@
   --warn: #f0b429;
   --error-bg: #3a2020;
   --error-border: #7a3a35;
+  --refill-soft: rgba(16, 185, 129, 0.22);
 }
 
 * { box-sizing: border-box; }
@@ -213,6 +215,7 @@ input[type='number'] {
   border-bottom: 1px solid var(--border);
 }
 .monthly-table tbody tr:nth-child(even) { background: var(--accent-soft); }
+.monthly-table tbody tr.refilled td { background: var(--refill-soft); }
 .monthly-table td.pos { color: var(--pos); }
 .monthly-table td.neg { color: var(--neg); }
 .monthly-table td.warn { color: var(--warn); }

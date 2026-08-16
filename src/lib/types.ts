@@ -32,6 +32,8 @@ export interface Result {
   label: string;
   value: number;
   format: 'currency' | 'percent' | 'ratio';
+  /** When set, shown verbatim instead of the formatted value (e.g. a wipeout month). */
+  note?: string;
 }
 
 /** One row of a SIP-style monthly series. */
@@ -50,6 +52,13 @@ export interface SeriesPoint {
   withdrawn: number;
   /** Interest/growth earned this month (on balance before this month's SIP/SWP). */
   interest: number;
+  /** Per-bucket balances (bucket calculators only). */
+  bucket1?: number;
+  bucket2?: number;
+  /** True on the final point when the run ended in wipeout rather than the horizon. */
+  depleted?: boolean;
+  /** Amount refilled from Bucket 2 to Bucket 1 this month (bucket calculators only). */
+  refill?: number;
 }
 
 /**

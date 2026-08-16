@@ -1,6 +1,7 @@
 import type { Calculator, Result, SeriesPoint } from './types.ts';
 import { sipTable, lastMonthlySip, lastMonthlySwp } from './sip.ts';
 import { incomeReturns } from './incomeReturns.ts';
+import { bucketTable } from './bucket.ts';
 
 const cur = new Intl.NumberFormat('en-IN', {
   style: 'currency',
@@ -83,4 +84,45 @@ export const incomeCalculator: Calculator = {
   ],
 };
 
-export const calculators: Calculator[] = [sipCalculator, incomeCalculator];
+export const bucketCalculator: Calculator = {
+  id: 'bucket',
+  title: 'Bucket Strategy',
+  fields: [
+    { key: 'capital', label: 'Investment capital', default: 10000000, min: 0, max: 1000000000, step: 100000, required: true },
+    {
+      key: 'portion',
+      label: 'Bucket 1 (spending) portion %',
+      default: 20,
+      min: 1,
+      max: 99,
+      step: 1,
+      required: true,
+      hint: (v) => `Bucket 2 (reserve) gets ${100 - (v.portion ?? 20)}%`,
+    },
+    { key: 'return1', label: 'Bucket 1 return % / year', default: 3, min: 0, max: 50, step: 0.5, required: false },
+    { key: 'return2', label: 'Bucket 2 return % / year', default: 8, min: 0, max: 50, step: 0.5, required: false },
+    { key: 'withdrawal', label: 'Monthly withdrawal', default: 100000, min: 0, max: 100000000, step: 1000, required: true },
+    { key: 'stepUp', label: 'Withdrawal step-up % / year', default: 0, min: 0, max: 50, step: 0.5, required: false },
+    { key: 'years', label: 'Years', default: 60, min: 1, max: 60, step: 1, required: true },
+  ],
+  compute: (v) => ({ kind: 'series', points: bucketTable(v as never) }),
+  describeSeries: (p: SeriesPoint): Result[] => [
+    { label: 'Final value', value: p.value, format: 'currency' },
+    { label: 'Invested', value: p.invested, format: 'currency' },
+    { label: 'Gain', value: p.gain, format: 'currency' },
+    { label: 'Multiple', value: p.multiple, format: 'ratio' },
+    { label: 'Total withdrawn', value: p.withdrawn, format: 'currency' },
+    ...(p.depleted
+      ? [
+          {
+            label: 'Wipeout',
+            value: 0,
+            format: 'ratio' as const,
+            note: `Depleted in Year ${Math.floor((p.month - 1) / 12) + 1}, Month ${((p.month - 1) % 12) + 1}`,
+          },
+        ]
+      : []),
+  ],
+};
+
+export const calculators: Calculator[] = [sipCalculator, incomeCalculator, bucketCalculator];

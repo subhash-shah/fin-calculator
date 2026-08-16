@@ -35,6 +35,7 @@ const curCompact = new Intl.NumberFormat('en-IN', {
 });
 
 function format(r: Result): string {
+  if (r.note !== undefined) return r.note;
   switch (r.format) {
     case 'currency':
       return cur.format(r.value);
@@ -245,12 +246,23 @@ function buildViewToggle(): HTMLElement {
 
 function monthlyRows(points: SeriesPoint[]): { headers: string[]; rows: (string | number)[][] } {
   const hasWithdrawn = points.some((p) => p.withdrawn > 0);
-  const headers = ['Month', 'Invested', 'Interest', ...(hasWithdrawn ? ['Withdrawn'] : []), 'Gain', 'Value', 'Multiple'];
+  const hasBuckets = points.some((p) => p.bucket1 !== undefined);
+  const headers = [
+    'Month',
+    ...(hasBuckets ? ['Bucket 1', 'Bucket 2'] : []),
+    'Invested',
+    'Interest',
+    ...(hasWithdrawn ? ['Withdrawn'] : []),
+    'Gain',
+    'Value',
+    'Multiple',
+  ];
   const rows = points.map((p) => {
     const year = Math.floor((p.month - 1) / 12) + 1;
     const monthInYear = ((p.month - 1) % 12) + 1;
     return [
       `Y${year} M${monthInYear}`,
+      ...(hasBuckets ? [p.bucket1!.toFixed(2), p.bucket2!.toFixed(2)] : []),
       p.invested.toFixed(2),
       p.interest.toFixed(2),
       ...(hasWithdrawn ? [p.withdrawn.toFixed(2)] : []),
@@ -325,19 +337,23 @@ function buildExportBar(points: SeriesPoint[]): HTMLElement {
 /** Full month-by-month calculation table for a series. */
 function buildMonthlyTable(points: SeriesPoint[]): HTMLElement {
   const hasWithdrawn = points.some((p) => p.withdrawn > 0);
+  const hasBuckets = points.some((p) => p.bucket1 !== undefined);
   const wrap = document.createElement('div');
   wrap.className = 'table-card card';
   const table = document.createElement('table');
   table.className = 'monthly-table';
   const thead = document.createElement('thead');
-  thead.innerHTML = `<tr><th>Month</th><th>Invested</th><th>Interest</th>${hasWithdrawn ? '<th>Withdrawn</th>' : ''}<th>Gain</th><th>Value</th><th>Multiple</th></tr>`;
+  thead.innerHTML =
+    `<tr><th>Month</th>${hasBuckets ? '<th>Bucket 1</th><th>Bucket 2</th>' : ''}<th>Invested</th><th>Interest</th>${hasWithdrawn ? '<th>Withdrawn</th>' : ''}<th>Gain</th><th>Value</th><th>Multiple</th></tr>`;
   const tbody = document.createElement('tbody');
   for (const p of points) {
     const year = Math.floor((p.month - 1) / 12) + 1;
     const monthInYear = ((p.month - 1) % 12) + 1;
     const tr = document.createElement('tr');
+    if (p.refill) tr.className = 'refilled';
     tr.innerHTML =
       `<td>Y${year} M${monthInYear}</td>` +
+      (hasBuckets ? `<td>${cur.format(p.bucket1!)}</td><td>${cur.format(p.bucket2!)}</td>` : '') +
       `<td>${cur.format(p.invested)}</td>` +
       `<td class="${p.interest < 0 ? 'neg' : p.interest > 0 ? 'pos' : ''}">${cur.format(p.interest)}</td>` +
       (hasWithdrawn ? `<td class="${p.withdrawn > 0 ? 'warn' : ''}">${cur.format(p.withdrawn)}</td>` : '') +
